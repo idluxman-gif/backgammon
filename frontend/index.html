@@ -447,6 +447,31 @@
                   opacity 0.35s ease, transform 0.35s ease;
     }
 
+    /* ── Drag and Drop ──────────────────────────── */
+    .drag-checker {
+      position: fixed;
+      border-radius: 50%;
+      z-index: 2000;
+      pointer-events: none;
+      opacity: 0.85;
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      transition: none;
+    }
+    .drag-checker.white {
+      background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #E8E8E8 40%, #A0A0A0 100%);
+      border: 2px solid rgba(255,255,255,0.15);
+    }
+    .drag-checker.black {
+      background: radial-gradient(circle at 35% 30%, #555555 0%, #2A2A2A 40%, #000000 100%);
+      border: 2px solid rgba(255,255,255,0.15);
+    }
+    .checker.ghost {
+      opacity: 0.25;
+    }
+    body.dragging-active { cursor: grabbing !important; }
+    body.dragging-active * { cursor: grabbing !important; }
+
     /* ── Dice ON Board ───────────────────────────── */
     .board-dice-overlay {
       position: absolute;
@@ -708,6 +733,36 @@
     }
     .surrender-overlay .cancel-btn:hover { background: rgba(255,255,255,0.18); }
 
+    /* ── Double Accepted Popup ───────────────────── */
+    .double-accepted-popup {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 950;
+      display: none;
+      align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .double-accepted-popup.visible { display: flex; }
+    .dap-content {
+      background: rgba(15, 15, 30, 0.92);
+      border: 2px solid #c9a96e;
+      border-radius: 16px;
+      padding: 28px 48px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(201, 169, 110, 0.3), 0 0 60px rgba(201, 169, 110, 0.15);
+      animation: dap-pop 0.35s ease-out;
+    }
+    @keyframes dap-pop {
+      0%   { transform: scale(0.7); opacity: 0; }
+      60%  { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .dap-text {
+      font-size: 1.4rem; font-weight: 700;
+      color: #c9a96e;
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 12px rgba(201, 169, 110, 0.4);
+    }
+
     /* ── Win Overlay ─────────────────────────────── */
     .win-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -811,6 +866,50 @@
 
     /* Board blur when win overlay is active */
     body.win-active .board-area { filter: blur(4px); transition: filter 0.4s; }
+
+    /* ── Lose Overlay Variant ──────────────────────── */
+    .win-overlay.lose-variant {
+      background: rgba(8, 8, 16, 0.92);
+    }
+    .win-overlay.lose-variant .win-trophy { display: none; }
+    .win-overlay.lose-variant .lose-icon {
+      font-size: 3.2rem; opacity: 0.6;
+      animation: trophy-bounce 1s ease-out;
+    }
+    .win-overlay.lose-variant .winner-text {
+      background: linear-gradient(135deg, #8a8a8a, #aaaaaa, #8a8a8a);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: none;
+      animation: none;
+      font-size: 2.8rem;
+    }
+    .win-overlay.lose-variant .win-subtitle {
+      color: rgba(255,255,255,0.45);
+    }
+    .win-overlay.lose-variant .win-type-label {
+      color: rgba(255,255,255,0.4);
+    }
+    .win-overlay.lose-variant .win-points-info {
+      color: rgba(255,255,255,0.35);
+    }
+    .win-overlay.lose-variant .play-again-btn {
+      background: linear-gradient(135deg, #666, #888);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .win-overlay.lose-variant .play-again-btn:hover {
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+
+    /* PvP combined: loser line below winner */
+    .loser-line {
+      font-size: 1.1rem; font-weight: 400;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.04em;
+      margin-top: -4px;
+      opacity: 0; animation: subtitle-appear 0.6s ease 0.4s forwards;
+    }
   </style>
 </head>
 <body>
@@ -1004,14 +1103,23 @@
     </div>
   </div>
 
+  <!-- Double Accepted Popup -->
+  <div class="double-accepted-popup" id="doubleAcceptedPopup">
+    <div class="dap-content">
+      <div class="dap-text" id="dapText">Double Accepted! Cube is now 2</div>
+    </div>
+  </div>
+
   <div class="win-overlay" id="winOverlay">
     <canvas id="confettiCanvas"></canvas>
     <div class="win-content">
-      <div class="win-trophy">&#127942;</div>
+      <div class="win-trophy" id="winTrophy">&#127942;</div>
+      <div class="lose-icon" id="loseIcon" style="display:none;">&#128148;</div>
       <div class="winner-text" id="winnerText"></div>
+      <div class="loser-line" id="loserLine" style="display:none;"></div>
       <div class="win-type-label" id="winTypeLabel"></div>
       <div class="win-points-info" id="winPointsInfo"></div>
-      <div class="win-subtitle">Congratulations! Outstanding game!</div>
+      <div class="win-subtitle" id="winSubtitle">Congratulations! Outstanding game!</div>
       <button class="play-again-btn" id="playAgainBtn">Play Again</button>
       <button class="new-match-btn" id="newMatchBtn">New Match</button>
     </div>
@@ -1127,138 +1235,203 @@
       return audioCtx;
     }
 
+    // Checker move: satisfying short "clack" — sawtooth ~200Hz, sharp attack, 30ms decay
     function playMoveSound() {
       if (!G.soundEnabled) return;
       try {
         const ctx = getAudioCtx();
+        const t = ctx.currentTime;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(120, t + 0.03);
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.08);
+        osc.start(t);
+        osc.stop(t + 0.04);
       } catch(e) {}
     }
 
+    // Blot hit: deeper dramatic "thud" — low 80Hz, medium 150ms decay
     function playCaptureSound() {
       if (!G.soundEnabled) return;
       try {
         const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        // Low thud oscillator
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(400, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.4, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(80, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+        gain.gain.setValueAtTime(0.35, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.12);
+        osc.start(t);
+        osc.stop(t + 0.16);
+        // Noise layer for impact texture
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1);
+        const nSrc = ctx.createBufferSource();
+        nSrc.buffer = buf;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(400, t);
+        const nGain = ctx.createGain();
+        nGain.gain.setValueAtTime(0.15, t);
+        nGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        nSrc.connect(lp);
+        lp.connect(nGain);
+        nGain.connect(ctx.destination);
+        nSrc.start(t);
+        nSrc.stop(t + 0.06);
       } catch(e) {}
     }
 
+    // Dice roll: rattling noise — 5 short bursts over 400ms
     function playDiceSound() {
       if (!G.soundEnabled) return;
       try {
         const ctx = getAudioCtx();
-        // Create white noise bursts to simulate dice rattle
-        const bufferSize = ctx.sampleRate * 0.3;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * 0.5;
+        const t = ctx.currentTime;
+        const burstCount = 5;
+        const totalDur = 0.4;
+        for (let i = 0; i < burstCount; i++) {
+          const offset = (i / burstCount) * totalDur;
+          const burstLen = 0.04 + Math.random() * 0.02;
+          const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * burstLen), ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          const bp = ctx.createBiquadFilter();
+          bp.type = 'bandpass';
+          bp.frequency.setValueAtTime(2500 + Math.random() * 1500, t + offset);
+          bp.Q.setValueAtTime(1.2, t + offset);
+          const g = ctx.createGain();
+          const vol = 0.18 * (1 - i * 0.12);
+          g.gain.setValueAtTime(vol, t + offset);
+          g.gain.exponentialRampToValueAtTime(0.001, t + offset + burstLen);
+          src.connect(bp);
+          bp.connect(g);
+          g.connect(ctx.destination);
+          src.start(t + offset);
+          src.stop(t + offset + burstLen);
         }
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-
-        const bandpass = ctx.createBiquadFilter();
-        bandpass.type = 'bandpass';
-        bandpass.frequency.setValueAtTime(3000, ctx.currentTime);
-        bandpass.Q.setValueAtTime(1.5, ctx.currentTime);
-
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.25, ctx.currentTime);
-        // Stuttered envelope for rattle effect
-        gain.gain.setValueAtTime(0.25, ctx.currentTime + 0.02);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime + 0.04);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime + 0.06);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime + 0.14);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
-        source.connect(bandpass);
-        bandpass.connect(gain);
-        gain.connect(ctx.destination);
-        source.start(ctx.currentTime);
-        source.stop(ctx.currentTime + 0.3);
       } catch(e) {}
     }
 
+    // Double offered: rising two-tone chime — 440Hz then 660Hz, 100ms each
+    function playDoubleOfferedSound() {
+      if (!G.soundEnabled) return;
+      try {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        [440, 660].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          const start = t + i * 0.12;
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.22, start + 0.01);
+          gain.gain.setValueAtTime(0.22, start + 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.11);
+        });
+      } catch(e) {}
+    }
+
+    // Double accepted: warm confirming chord — 440+550+660Hz simultaneous, 200ms
+    function playDoubleAcceptedSound() {
+      if (!G.soundEnabled) return;
+      try {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        [440, 550, 660].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.15, t + 0.015);
+          gain.gain.setValueAtTime(0.15, t + 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.21);
+        });
+      } catch(e) {}
+    }
+
+    // Victory fanfare: dramatic arpeggio with longer sustain
     function playVictoryFanfare() {
       if (!G.soundEnabled) return;
       try {
         const ctx = getAudioCtx();
+        const t = ctx.currentTime;
         // Rising arpeggio: C5, E5, G5, C6
         const notes = [523.25, 659.25, 783.99, 1046.50];
-        const noteLength = 0.15;
+        const noteLen = 0.15;
 
         notes.forEach((freq, i) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-          const startTime = ctx.currentTime + i * noteLength;
+          osc.frequency.setValueAtTime(freq, t);
+          const start = t + i * noteLen;
           const isLast = i === notes.length - 1;
-          const dur = isLast ? 0.5 : noteLength;
-
-          gain.gain.setValueAtTime(0, startTime);
-          gain.gain.linearRampToValueAtTime(0.25, startTime + 0.02);
-          gain.gain.setValueAtTime(0.25, startTime + dur * 0.7);
-          gain.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
-
+          const dur = isLast ? 0.8 : noteLen;
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
+          gain.gain.setValueAtTime(0.25, start + dur * 0.6);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
           osc.connect(gain);
           gain.connect(ctx.destination);
-          osc.start(startTime);
-          osc.stop(startTime + dur);
+          osc.start(start);
+          osc.stop(start + dur);
         });
 
-        // Final chord (C5+E5+G5) sustained
-        const chordStart = ctx.currentTime + notes.length * noteLength;
-        [523.25, 659.25, 783.99].forEach(freq => {
+        // Final sustained chord (C5+E5+G5+C6) — longer sustain for drama
+        const chordStart = t + notes.length * noteLen;
+        [523.25, 659.25, 783.99, 1046.50].forEach(freq => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, chordStart);
           gain.gain.setValueAtTime(0, chordStart);
-          gain.gain.linearRampToValueAtTime(0.15, chordStart + 0.05);
-          gain.gain.exponentialRampToValueAtTime(0.001, chordStart + 0.8);
+          gain.gain.linearRampToValueAtTime(0.13, chordStart + 0.05);
+          gain.gain.setValueAtTime(0.13, chordStart + 0.6);
+          gain.gain.exponentialRampToValueAtTime(0.001, chordStart + 1.2);
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(chordStart);
-          osc.stop(chordStart + 0.8);
+          osc.stop(chordStart + 1.2);
         });
       } catch(e) {}
     }
 
+    // Error: gentle descending two-tone
     function playErrorSound() {
       if (!G.soundEnabled) return;
       try {
         const ctx = getAudioCtx();
-        // Gentle descending two-tone "boop-boop" error
-        const notes = [440, 330]; // A4 → E4, a gentle minor fall
-        notes.forEach((freq, i) => {
+        const t = ctx.currentTime;
+        [440, 330].forEach((freq, i) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
-          const start = ctx.currentTime + i * 0.12;
+          osc.frequency.setValueAtTime(freq, t);
+          const start = t + i * 0.12;
           gain.gain.setValueAtTime(0, start);
           gain.gain.linearRampToValueAtTime(0.2, start + 0.015);
           gain.gain.exponentialRampToValueAtTime(0.001, start + 0.12);
@@ -1426,6 +1599,21 @@
         }
       }
       return true;
+    }
+
+    /**
+     * Check if a player is completely blocked — on the bar with all 6 entry
+     * points closed. No dice roll can produce legal moves, so skip rolling.
+     */
+    function isCompletelyBlocked(player) {
+      const bi = barIdx(player);
+      if (G.board[bi] === 0) return false; // not on bar, can't be fully blocked pre-roll
+      // White enters on points 1-6, Black enters on points 19-24
+      const entryStart = player === 'white' ? 1 : 19;
+      for (let p = entryStart; p < entryStart + 6; p++) {
+        if (canLand(G.board, p, player)) return false; // at least one entry open
+      }
+      return true; // all 6 entry points blocked
     }
 
     /** Check if a move will hit a blot. */
@@ -3546,6 +3734,16 @@
       if (!isAITurn()) return;
 
       if (G.phase === Phase.ROLLING) {
+        // ── Feature 3: skip roll if completely blocked on bar ──
+        if (isCompletelyBlocked('black')) {
+          G.message = `${pName('black')} has no moves — turn passes.`;
+          playErrorSound();
+          renderBoard();
+          const t = setTimeout(endTurn, 1500);
+          G.aiTimers.push(t);
+          return;
+        }
+
         // First, consider doubling
         if (aiShouldDouble()) {
           showAIThinking(true);
@@ -4259,6 +4457,7 @@
 
       bar.addEventListener('click', handleBarClick);
       bar.addEventListener('dblclick', () => handleQuickMove('bar'));
+      attachDragListeners(bar, 'bar');
 
       const els = [];
 
@@ -4282,6 +4481,7 @@
 
           point.addEventListener('click', () => handlePointClick(pointNum));
           point.addEventListener('dblclick', () => handleQuickMove(pointNum));
+          attachDragListeners(point, pointNum);
 
           qEl.appendChild(point);
         }
@@ -4479,6 +4679,15 @@
       if (G.phase !== Phase.ROLLING) return;
       if (isAITurn()) return; // AI rolls itself
 
+      // ── Feature 3: skip roll if completely blocked on bar ──
+      if (isCompletelyBlocked(G.currentPlayer)) {
+        G.message = `${pName(G.currentPlayer)} has no moves — turn passes.`;
+        playErrorSound();
+        renderBoard();
+        setTimeout(endTurn, 1500);
+        return;
+      }
+
       const rollBtn = document.getElementById('rollBtn');
       rollBtn.disabled = true;
 
@@ -4524,10 +4733,72 @@
           const doublesNote = v1 === v2 ? ' (doubles — 4 moves!)' : '';
           G.message = `${pName(G.currentPlayer)} rolled ${v1} and ${v2}${doublesNote} — select a checker.`;
           renderBoard();
+          // Feature 5: auto-move if only one legal play
+          tryAutoMove();
         }
 
         rollBtn.disabled = false;
       }, 400);
+    }
+
+    // ════════════════════════════════════════════════
+    //  GAME FLOW — Auto-move when forced (Feature 5)
+    // ════════════════════════════════════════════════
+
+    /**
+     * Check if there is exactly one legal move and auto-execute it.
+     * Shows a brief gold highlight before executing.
+     * Returns true if auto-move was triggered, false otherwise.
+     */
+    function tryAutoMove() {
+      if (G.phase !== Phase.MOVING) return false;
+      if (isAITurn()) return false;
+      if (G.allLegalMoves.length !== 1) return false;
+
+      const move = G.allLegalMoves[0];
+      const from = move.from;
+
+      // Highlight the checker that will auto-move
+      G.selectedPoint = from;
+      G.validMoves = [move];
+      G.combinedTargets = [];
+      G.message = `Only move — played automatically.`;
+      renderBoard();
+
+      // Add gold glow to the source checker
+      let glowEl = null;
+      if (from === 'bar') {
+        const barId = G.currentPlayer === 'white' ? 'barWhite' : 'barBlack';
+        const barEl = document.getElementById(barId);
+        const checkers = barEl.querySelectorAll('.checker');
+        if (checkers.length > 0) glowEl = checkers[checkers.length - 1];
+      } else {
+        const pointEl = document.querySelector(`.point[data-point="${from}"]`);
+        if (pointEl) {
+          const checkers = pointEl.querySelectorAll('.checker');
+          if (checkers.length > 0) glowEl = checkers[checkers.length - 1];
+        }
+      }
+
+      if (glowEl) {
+        glowEl.style.boxShadow = '0 0 12px 4px rgba(201, 169, 110, 0.8)';
+        glowEl.style.transition = 'box-shadow 0.3s ease';
+      }
+
+      // Execute after a brief highlight delay
+      setTimeout(() => {
+        if (glowEl) {
+          glowEl.style.boxShadow = '';
+          glowEl.style.transition = '';
+        }
+        executeMove(move);
+        // After executing, check if there's another forced move
+        if (G.phase === Phase.MOVING && G.allLegalMoves.length === 1) {
+          setTimeout(() => tryAutoMove(), 400);
+        }
+      }, 500);
+
+      return true;
     }
 
     // ════════════════════════════════════════════════
@@ -4536,8 +4807,10 @@
 
     let _clickTimer = null;
     const CLICK_DELAY = 220;
+    let _dragJustEnded = false; // suppress click after drag
 
     function handlePointClick(pointNum) {
+      if (_dragJustEnded) return; // drag end already handled this
       if (G.phase !== Phase.MOVING) return;
       if (isAITurn()) return; // Don't allow human clicks during AI turn
 
@@ -4606,6 +4879,7 @@
     }
 
     function handleBarClick() {
+      if (_dragJustEnded) return;
       if (G.phase !== Phase.MOVING) return;
       if (isAITurn()) return;
       if (!hasBar(G.currentPlayer)) return;
@@ -4668,6 +4942,294 @@
       G.combinedTargets = [];
       executeMove(movesFromHere[0]);
     }
+
+    // ════════════════════════════════════════════════
+    //  GAME FLOW — Drag and Drop
+    // ════════════════════════════════════════════════
+
+    const _drag = {
+      active: false,
+      el: null,          // floating checker element
+      from: null,        // source point number or 'bar'
+      ghostEl: null,     // the checker element at origin (dimmed)
+      checkerSize: 30,   // pixel size of the checker
+      startX: 0,
+      startY: 0,
+      moved: false,      // true if mouse moved enough to count as drag
+    };
+
+    /** Remove ALL stale drag-checker elements from body (safety cleanup). */
+    function dragCleanup() {
+      document.querySelectorAll('.drag-checker').forEach(el => el.remove());
+      document.querySelectorAll('.checker.ghost').forEach(el => el.classList.remove('ghost'));
+      document.body.classList.remove('dragging-active');
+    }
+
+    function dragGetPointFromXY(clientX, clientY) {
+      // Check each point element for hit
+      const points = document.querySelectorAll('.point[data-point]');
+      for (const pt of points) {
+        const r = pt.getBoundingClientRect();
+        if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+          return parseInt(pt.dataset.point);
+        }
+      }
+      // Check bear-off trays
+      const trayW = document.getElementById('trayWhite');
+      const trayB = document.getElementById('trayBlack');
+      if (trayW) {
+        const r = trayW.getBoundingClientRect();
+        if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+          return 'off-white';
+        }
+      }
+      if (trayB) {
+        const r = trayB.getBoundingClientRect();
+        if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+          return 'off-black';
+        }
+      }
+      return null;
+    }
+
+    function dragStart(from, clientX, clientY) {
+      if (G.phase !== Phase.MOVING) return;
+      if (isAITurn()) return;
+
+      // Clean up any leftover drag elements from a previous broken drag
+      dragCleanup();
+
+      const player = G.currentPlayer;
+
+      // Check if this is a valid checker to pick up
+      let movesFromHere;
+      if (from === 'bar') {
+        if (!hasBar(player)) return;
+        movesFromHere = G.allLegalMoves.filter(m => m.from === 'bar');
+      } else {
+        if (!ownsPoint(G.board, from, player)) return;
+        movesFromHere = G.allLegalMoves.filter(m => m.from === from);
+      }
+      if (movesFromHere.length === 0) return;
+
+      _drag.active = true;
+      _drag.el = null;
+      _drag.from = from;
+      _drag.ghostEl = null;
+      _drag.checkerSize = 30;
+      _drag.startX = clientX;
+      _drag.startY = clientY;
+      _drag.moved = false;
+      _drag._movesFromHere = movesFromHere;
+      _drag._player = player;
+    }
+
+    function dragPromote(clientX, clientY) {
+      // Called when mouse moves past threshold — create the visual drag elements
+      const from = _drag.from;
+      const player = _drag._player;
+      const movesFromHere = _drag._movesFromHere;
+
+      // Cancel any pending click timer
+      clearTimeout(_clickTimer);
+      _clickTimer = null;
+
+      // Set selection state (so valid targets highlight)
+      G.selectedPoint = from;
+      G.validMoves = movesFromHere;
+      G.combinedTargets = calcCombinedTargets(from, movesFromHere);
+      renderBoard();
+
+      // Find the top checker at this point to use as ghost
+      let ghostChecker = null;
+      let checkerSize = 30;
+      if (from === 'bar') {
+        const barId = player === 'white' ? 'barWhite' : 'barBlack';
+        const barEl = document.getElementById(barId);
+        const checkers = barEl.querySelectorAll('.checker');
+        if (checkers.length > 0) ghostChecker = checkers[checkers.length - 1];
+      } else {
+        const pointEl = document.querySelector(`.point[data-point="${from}"]`);
+        if (pointEl) {
+          const checkers = pointEl.querySelectorAll('.checker');
+          if (checkers.length > 0) ghostChecker = checkers[checkers.length - 1];
+        }
+      }
+
+      if (ghostChecker) {
+        const r = ghostChecker.getBoundingClientRect();
+        checkerSize = r.width;
+        ghostChecker.classList.add('ghost');
+        _drag.ghostEl = ghostChecker;
+      }
+      _drag.checkerSize = checkerSize;
+
+      // Create the floating drag checker
+      const el = document.createElement('div');
+      el.className = `drag-checker ${player}`;
+      el.style.width = checkerSize + 'px';
+      el.style.height = checkerSize + 'px';
+      el.style.left = (clientX - checkerSize / 2) + 'px';
+      el.style.top = (clientY - checkerSize / 2) + 'px';
+      document.body.appendChild(el);
+
+      _drag.el = el;
+      document.body.classList.add('dragging-active');
+    }
+
+    function dragMove(clientX, clientY) {
+      if (!_drag.active) return;
+      const dx = clientX - _drag.startX;
+      const dy = clientY - _drag.startY;
+
+      if (!_drag.moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        _drag.moved = true;
+        dragPromote(clientX, clientY);
+      }
+
+      if (_drag.el) {
+        _drag.el.style.left = (clientX - _drag.checkerSize / 2) + 'px';
+        _drag.el.style.top = (clientY - _drag.checkerSize / 2) + 'px';
+      }
+    }
+
+    function dragEnd(clientX, clientY) {
+      if (!_drag.active) return;
+
+      const wasMoved = _drag.moved;
+      const savedValidMoves = G.validMoves;
+      const savedCombinedTargets = G.combinedTargets;
+
+      // Always fully reset drag state FIRST
+      _drag.active = false;
+      _drag.moved = false;
+      _drag._movesFromHere = null;
+      _drag._player = null;
+
+      // Clean up ALL drag visuals (catches any stale elements too)
+      dragCleanup();
+      _drag.el = null;
+      _drag.ghostEl = null;
+
+      // If didn't actually drag (no visual drag promoted), let click handler run normally
+      if (!wasMoved) {
+        return;
+      }
+
+      // Suppress the click event that follows mouseup after a drag
+      _dragJustEnded = true;
+      setTimeout(() => { _dragJustEnded = false; }, 100);
+
+      // Determine drop target
+      const hitTarget = dragGetPointFromXY(clientX, clientY);
+      let executed = false;
+
+      if (hitTarget !== null) {
+        if (hitTarget === 'off-white' || hitTarget === 'off-black') {
+          // Bear-off tray drop
+          const bearOffMove = savedValidMoves.find(m => m.to === 'off');
+          if (bearOffMove) {
+            executeMove(bearOffMove);
+            executed = true;
+          }
+        } else {
+          // Point drop — check if it's a direct valid target
+          const move = savedValidMoves.find(m => m.to === hitTarget);
+          if (move) {
+            executeMove(move);
+            executed = true;
+          } else if (savedCombinedTargets.includes(hitTarget)) {
+            // Combined target — execute two-move sequence
+            const player = G.currentPlayer;
+            const dir = moveDir(player);
+            for (const m1 of savedValidMoves) {
+              if (m1.to === 'off') continue;
+              const bCopy = [...G.board];
+              applyMove(bCopy, m1, player);
+              const rest = [...G.dice.remaining];
+              rest.splice(rest.indexOf(m1.dieValue), 1);
+              for (const dv of [...new Set(rest)]) {
+                const dest = m1.to + dir * dv;
+                if (dest === hitTarget && canLand(bCopy, dest, player)) {
+                  executeMove(m1);
+                  const secondMove = G.allLegalMoves.find(m => m.from === m1.to && m.to === hitTarget);
+                  if (secondMove) executeMove(secondMove);
+                  executed = true;
+                  break;
+                }
+              }
+              if (executed) break;
+            }
+          }
+        }
+      }
+
+      if (!executed) {
+        // Return to origin — deselect
+        G.selectedPoint = null;
+        G.validMoves = [];
+        G.combinedTargets = [];
+        renderBoard();
+      }
+    }
+
+    // ── Attach drag handlers (called from buildBoard) ──
+    function attachDragListeners(element, fromValue) {
+      // Mouse — use mousedown to initiate potential drag
+      element.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return; // left button only
+        dragStart(fromValue, e.clientX, e.clientY);
+      });
+
+      // Touch
+      element.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        dragStart(fromValue, t.clientX, t.clientY);
+      }, { passive: true });
+    }
+
+    // Global mouse/touch move and end
+    document.addEventListener('mousemove', (e) => {
+      if (_drag.active) {
+        e.preventDefault();
+        dragMove(e.clientX, e.clientY);
+      }
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (_drag.active) {
+        dragEnd(e.clientX, e.clientY);
+      }
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (_drag.active && e.touches.length === 1) {
+        e.preventDefault();
+        dragMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+      if (_drag.active) {
+        const t = e.changedTouches[0];
+        dragEnd(t.clientX, t.clientY);
+      }
+    });
+
+    document.addEventListener('touchcancel', () => {
+      if (_drag.active) {
+        _drag.active = false;
+        _drag.moved = false;
+        dragCleanup();
+        _drag.el = null;
+        _drag.ghostEl = null;
+        G.selectedPoint = null;
+        G.validMoves = [];
+        G.combinedTargets = [];
+        renderBoard();
+      }
+    });
 
     // ════════════════════════════════════════════════
     //  GAME FLOW — Move execution
@@ -4917,6 +5479,7 @@
       cubeEl.textContent = nextValue;
 
       document.getElementById('doublingOverlay').classList.add('visible');
+      playDoubleOfferedSound();
       renderBoard();
 
       // If AI is the doubling target, have AI auto-respond
@@ -4928,6 +5491,22 @@
       }
     }
 
+    let _dapTimer = null;
+    function showDoubleAcceptedPopup(cubeValue) {
+      if (_dapTimer) { clearTimeout(_dapTimer); _dapTimer = null; }
+      const popup = document.getElementById('doubleAcceptedPopup');
+      const text = document.getElementById('dapText');
+      text.textContent = `Double Accepted! Cube is now ${cubeValue}`;
+      // Remove and re-add to restart animation
+      popup.classList.remove('visible');
+      void popup.offsetWidth; // force reflow
+      popup.classList.add('visible');
+      _dapTimer = setTimeout(() => {
+        popup.classList.remove('visible');
+        _dapTimer = null;
+      }, 2000);
+    }
+
     function handleAcceptDouble() {
       const opponent = G.doublingTarget;
       G.cube.value *= 2;
@@ -4935,6 +5514,8 @@
 
       G.doublingTarget = null;
       document.getElementById('doublingOverlay').classList.remove('visible');
+      playDoubleAcceptedSound();
+      showDoubleAcceptedPopup(G.cube.value);
 
       // Continue to rolling phase
       G.phase = Phase.ROLLING;
@@ -5033,9 +5614,42 @@
     function showWinCelebration(winner, winType, points) {
       const overlay = document.getElementById('winOverlay');
       const textEl = document.getElementById('winnerText');
+      const loser = winner === 'white' ? 'black' : 'white';
+      const loserLine = document.getElementById('loserLine');
+      const winTrophy = document.getElementById('winTrophy');
+      const loseIcon = document.getElementById('loseIcon');
+      const subtitle = document.getElementById('winSubtitle');
 
-      textEl.textContent = `${pName(winner)} Wins!`;
-      textEl.className = `winner-text ${winner}-wins`;
+      // Reset variant classes
+      overlay.classList.remove('lose-variant');
+      winTrophy.style.display = '';
+      loseIcon.style.display = 'none';
+      loserLine.style.display = 'none';
+
+      // Determine if this is a "lose" screen (PvAI and AI wins)
+      const isLoseScreen = G.mode === 'pvai' && winner === 'black';
+
+      if (isLoseScreen) {
+        // ── LOSER SCREEN (human lost to AI) ──
+        overlay.classList.add('lose-variant');
+        winTrophy.style.display = 'none';
+        loseIcon.style.display = '';
+        textEl.textContent = `You Lose`;
+        textEl.className = 'winner-text';
+        subtitle.textContent = 'Better luck next time!';
+      } else if (G.mode === 'pvp') {
+        // ── PvP: combined winner + loser line ──
+        textEl.textContent = `${pName(winner)} Wins!`;
+        textEl.className = `winner-text ${winner}-wins`;
+        loserLine.textContent = `${pName(loser)} loses`;
+        loserLine.style.display = '';
+        subtitle.textContent = 'Great game!';
+      } else {
+        // ── WINNER SCREEN (human won vs AI, or default) ──
+        textEl.textContent = `${pName(winner)} Wins!`;
+        textEl.className = `winner-text ${winner}-wins`;
+        subtitle.textContent = 'Congratulations! Outstanding game!';
+      }
 
       // Win type label
       const typeLabel = document.getElementById('winTypeLabel');
@@ -5066,8 +5680,13 @@
         });
       });
 
-      startConfetti(winner);
-      playVictoryFanfare();
+      // Confetti and fanfare only for winners (not losers)
+      if (!isLoseScreen) {
+        startConfetti(winner);
+        playVictoryFanfare();
+      } else {
+        playErrorSound();
+      }
       document.body.classList.add('win-active');
 
       // Update scoreboard
