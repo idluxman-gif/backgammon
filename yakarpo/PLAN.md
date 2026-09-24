@@ -1,4 +1,4 @@
-# Israel vs. the World: Price Comparison Platform (working title)
+# YakarPo (יקר פה): Israel vs. Europe price comparison
 
 > **The voice can be angry. The numbers can't be wrong.**
 > Every sourced claim gets shared. Every mistake gets screenshotted by the people who profit from high prices.
@@ -152,10 +152,21 @@ Networks of AI accounts posing as real people count as **coordinated inauthentic
 
 ---
 
-## 8. Open questions for the founder
+## 8. Decisions
 
-- Name and brand: Hebrew-first, English-first, or bilingual? (Ideas: *Mechir HaEmet / The True Price*, *Receipt Shock*, *Ze Lo Normali*, *Kama Ze BeHolland?*)
-- Which comparison countries go in v1? (Suggested: NL, DE, FR, ES, GR, CY. That mixes rich and less-rich EU economies, so "they're just richer" doesn't hold up.)
-- Is this a solo project, or are there collaborators, and who owns content approval?
+- **Name:** YakarPo (יקר פה).
+- **Language:** Hebrew only (RTL). The audience is Israelis, in Israel and abroad.
+- **Comparison countries:** all of Europe, not a short list. Every receipt is compared from the country it came from.
+- **Repository:** moving to a dedicated `YakarPo` repo. This folder is self-contained so it can be moved as is.
+
+## 9. First receipt (21-09-2026, Lidl Harderwijk, NL)
+
+- Data: `data/receipts/2026-09-21-lidl-harderwijk.json` (personal and card details removed).
+- Page: `web/receipt-2026-09-21-lidl-harderwijk.html`, built with `python3 tools/render_receipt.py <json> <out.html>`.
+- Result: 27 of the 40 product lines matched (€113.82). In Israel the same items cost **+23%** at the cheapest prices found and **+58%** at typical shelf prices. Dairy and eggs are the biggest gap, at **+93%**. Israel is cheaper for several vegetables and for bottled water.
+- Israeli prices were collected by hand from price-comparison sites through web search. This sandbox cannot reach Israeli retailer sites directly, so the next step is ingesting the official price-transparency files.
+
+## 10. Open questions
+
 - Budget for LLM calls and the WhatsApp Business API.
-- A dedicated repository? This plan currently lives inside the `backgammon` repo.
+- Solo project or collaborators, and who approves content before it's published?
