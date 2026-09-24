@@ -1,5 +1,7 @@
 # YakarPo (יקר פה): Israel vs. Europe price comparison
 
+> Background and strategy notes. **The source of truth for what we build is [`PRD.md`](PRD.md).**
+
 > **The voice can be angry. The numbers can't be wrong.**
 > Every sourced claim gets shared. Every mistake gets screenshotted by the people who profit from high prices.
 > Being credible is what gives the project any power.
